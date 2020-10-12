@@ -102,6 +102,7 @@ public class MainActivity extends AppCompatActivity {
         MimeTypeMap mimeTypeMap = MimeTypeMap.getSingleton();
         return mimeTypeMap.getExtensionFromMimeType(contentResolver.getType(uri));
     }
+    @RequiresApi(api = Build.VERSION_CODES.M)
     void uploadImage(View view)
     {
             if (mImageUri == null || mImageUri.equals(Uri.EMPTY)) {
