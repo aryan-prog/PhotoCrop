@@ -3,8 +3,8 @@
     xmlns:item="http://schemas.android.com/apk/res-auto">
     <item android:title="16:9" android:id="@+id/a16_9"></item>
     <item android:title="9:16" android:id="@+id/a9_16"></item>
-    <item android:title="16:9" android:id="@+id/a3_4"></item>
-    <item android:title="9:16" android:id="@+id/a4_3"></item>
+    <item android:title="3:4" android:id="@+id/a3_4"></item>
+    <item android:title="4:3" android:id="@+id/a4_3"></item>
 
 
 

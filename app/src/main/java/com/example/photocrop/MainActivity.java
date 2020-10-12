@@ -50,30 +50,11 @@ public class MainActivity extends AppCompatActivity {
 
         storageReference = FirebaseStorage.getInstance().getReference("Crop");
 
-        Bundle bundle = getIntent().getBundleExtra(CropImage.CROP_IMAGE_EXTRA_BUNDLE);
-        mImageUri = bundle.getParcelable(CropImage.CROP_IMAGE_EXTRA_SOURCE);
-        mOptions = bundle.getParcelable(CropImage.CROP_IMAGE_EXTRA_OPTIONS);
+       // Bundle bundle = getIntent().getBundleExtra(CropImage.CROP_IMAGE_EXTRA_BUNDLE);
+       // mImageUri = bundle.getParcelable(CropImage.CROP_IMAGE_EXTRA_SOURCE);
+       // mOptions = bundle.getParcelable(CropImage.CROP_IMAGE_EXTRA_OPTIONS);
 
-        if (savedInstanceState == null) {
-            if (mImageUri == null || mImageUri.equals(Uri.EMPTY)) {
-                if (CropImage.isExplicitCameraPermissionRequired(this)) {
-                    // request permissions and handle the result in onRequestPermissionsResult()
-                    requestPermissions(
-                            new String[]{Manifest.permission.CAMERA},
-                            CropImage.CAMERA_CAPTURE_PERMISSIONS_REQUEST_CODE);
-                } else {
-                    CropImage.startPickImageActivity(this);
-                }
-            } else if (CropImage.isReadExternalStoragePermissionsRequired(this, mImageUri)) {
-                // request permissions and handle the result in onRequestPermissionsResult()
-                requestPermissions(
-                        new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
-                        CropImage.PICK_IMAGE_PERMISSIONS_REQUEST_CODE);
-            } else {
-                // no permissions required or already grunted, can start crop image activity
-                mCropImageView.setImageUriAsync(mImageUri);
-            }
-        }
+
     }
 
     @Override
@@ -121,10 +102,31 @@ public class MainActivity extends AppCompatActivity {
         MimeTypeMap mimeTypeMap = MimeTypeMap.getSingleton();
         return mimeTypeMap.getExtensionFromMimeType(contentResolver.getType(uri));
     }
-    private void uploadImage(View view){
+    void uploadImage(View view)
+    {
+            if (mImageUri == null || mImageUri.equals(Uri.EMPTY)) {
+                if (CropImage.isExplicitCameraPermissionRequired(this)) {
+                    // request permissions and handle the result in onRequestPermissionsResult()
+                    requestPermissions(
+                            new String[]{Manifest.permission.CAMERA},
+                            CropImage.CAMERA_CAPTURE_PERMISSIONS_REQUEST_CODE);
+                } else {
+                    CropImage.startPickImageActivity(this);
+                }
+            } else if (CropImage.isReadExternalStoragePermissionsRequired(this, mImageUri)) {
+                // request permissions and handle the result in onRequestPermissionsResult()
+                requestPermissions(
+                        new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
+                        CropImage.PICK_IMAGE_PERMISSIONS_REQUEST_CODE);
+            } else {
+                // no permissions required or already grunted, can start crop image activity
+                mCropImageView.setImageUriAsync(mImageUri);
+            }
+
         final ProgressDialog progressDialog=new ProgressDialog(this);
         progressDialog.setMessage("Posting");
         progressDialog.show();
+
 
         if(mImageUri!=null){
             final StorageReference filereference=storageReference.child(System.currentTimeMillis()+","+getFileExtension(mImageUri));
