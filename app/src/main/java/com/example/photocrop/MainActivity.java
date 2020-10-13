@@ -4,19 +4,24 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.constraintlayout.widget.ConstraintSet;
 
 import android.Manifest;
 import android.app.ProgressDialog;
 import android.content.ContentResolver;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.webkit.MimeTypeMap;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.Toast;
 
@@ -34,12 +39,12 @@ import com.theartofdev.edmodo.cropper.CropImageOptions;
 import com.theartofdev.edmodo.cropper.CropImageView;
 
 public class MainActivity extends AppCompatActivity {
-    Uri mImageUri;
-    String myUrl = "";
     private CropImageView mCropImageView;
-    private StorageTask uploadTask;
-    StorageReference storageReference;
+    Uri imageUri;
+    ConstraintLayout layout;
     ImageView imageView;
+    Button upload;
+    private static final int PICK_REQUEST = 53;
     private CropImageOptions mOptions;
 
     @RequiresApi(api = Build.VERSION_CODES.M)
@@ -48,12 +53,19 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        storageReference = FirebaseStorage.getInstance().getReference("Crop");
+        upload=findViewById(R.id.upload);
+        imageView=findViewById(R.id.imageView);
+        layout=findViewById(R.id.layout);
 
-       // Bundle bundle = getIntent().getBundleExtra(CropImage.CROP_IMAGE_EXTRA_BUNDLE);
-       // mImageUri = bundle.getParcelable(CropImage.CROP_IMAGE_EXTRA_SOURCE);
-       // mOptions = bundle.getParcelable(CropImage.CROP_IMAGE_EXTRA_OPTIONS);
-
+        upload.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent();
+                intent.setType("image/*");
+                intent.setAction(Intent.ACTION_GET_CONTENT);
+                startActivityForResult(Intent.createChooser(intent, "Select Picture"), PICK_REQUEST);
+            }
+        });
 
     }
 
@@ -70,15 +82,24 @@ public class MainActivity extends AppCompatActivity {
         super.onOptionsItemSelected(item);
         switch (item.getItemId()) {
             case R.id.a9_16:
-                CropImage.activity().setAspectRatio(9, 16).start(MainActivity.this);
+                //CropImage.activity().setAspectRatio(9, 16).start(MainActivity.this)
+                ConstraintSet set = new ConstraintSet();
+                set.clone(layout);
+                set.setDimensionRatio(R.id.imageView, "16:9");
+                set.applyTo(layout);
+
+                break;
 
             case R.id.a16_9:
                 CropImage.activity().setAspectRatio(16, 9).start(MainActivity.this);
+                break;
 
             case R.id.a3_4:
                 CropImage.activity().setAspectRatio(3, 4).start(MainActivity.this);
+                break;
             case R.id.a4_3:
                 CropImage.activity().setAspectRatio(4, 3).start(MainActivity.this);
+                break;
 
         }
         return true;
@@ -88,85 +109,45 @@ public class MainActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        if (requestCode == CropImage.CROP_IMAGE_ACTIVITY_REQUEST_CODE && resultCode == RESULT_OK) {
+        if (requestCode == PICK_REQUEST && resultCode == RESULT_OK) {
             CropImage.ActivityResult result = CropImage.getActivityResult(data);
-            mImageUri = result.getUri();
+            imageUri=data.getData();
+            try{
+                Bitmap bitmap= MediaStore.Images.Media.getBitmap(getContentResolver(),imageUri);
+                imageView.setImageBitmap(bitmap);
+            }catch(Exception e){
+                e.printStackTrace();
+            }
         } else {
             Toast.makeText(MainActivity.this, "Something gone wrong!", Toast.LENGTH_SHORT).show();
             startActivity(new Intent(MainActivity.this, MainActivity.class));
             finish();
         }
     }
-    private String getFileExtension(Uri uri) {
-        ContentResolver contentResolver = getContentResolver();
-        MimeTypeMap mimeTypeMap = MimeTypeMap.getSingleton();
-        return mimeTypeMap.getExtensionFromMimeType(contentResolver.getType(uri));
-    }
+
     @RequiresApi(api = Build.VERSION_CODES.M)
-    void uploadImage(View view)
+    public void uploadImage(View view)
     {
-            if (mImageUri == null || mImageUri.equals(Uri.EMPTY)) {
+
                 if (CropImage.isExplicitCameraPermissionRequired(this)) {
                     // request permissions and handle the result in onRequestPermissionsResult()
                     requestPermissions(
                             new String[]{Manifest.permission.CAMERA},
                             CropImage.CAMERA_CAPTURE_PERMISSIONS_REQUEST_CODE);
+
+                    requestPermissions(
+                    new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
+                            CropImage.PICK_IMAGE_PERMISSIONS_REQUEST_CODE);
                 } else {
+                    mCropImageView.setImageResource(R.id.imageView);
                     CropImage.startPickImageActivity(this);
                 }
-            } else if (CropImage.isReadExternalStoragePermissionsRequired(this, mImageUri)) {
-                // request permissions and handle the result in onRequestPermissionsResult()
-                requestPermissions(
-                        new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
-                        CropImage.PICK_IMAGE_PERMISSIONS_REQUEST_CODE);
-            } else {
-                // no permissions required or already grunted, can start crop image activity
-                mCropImageView.setImageUriAsync(mImageUri);
-            }
+
 
         final ProgressDialog progressDialog=new ProgressDialog(this);
         progressDialog.setMessage("Posting");
         progressDialog.show();
 
-
-        if(mImageUri!=null){
-            final StorageReference filereference=storageReference.child(System.currentTimeMillis()+","+getFileExtension(mImageUri));
-
-            uploadTask=filereference.putFile(mImageUri);
-            uploadTask.continueWithTask(new Continuation() {
-                @Override
-                public Object then(@NonNull Task task) throws Exception {
-                    if(task.isComplete())
-                        throw task.getException();
-
-                    return filereference.getDownloadUrl();
-                }
-            }).addOnCompleteListener(new OnCompleteListener<Uri>() {
-                @Override
-                public void onComplete(@NonNull Task task) {
-                    if(task.isSuccessful()){
-                        Uri downloadUri= (Uri) task.getResult();
-                        myUrl=downloadUri.toString();
-
-                        DatabaseReference reference= FirebaseDatabase.getInstance().getReference("Crop");
-
-
-                        progressDialog.dismiss();
-                        //startActivity(new Intent(MainActivity.this,MainActivity.class));
-                        //finish();
-                    }else{
-                        Toast.makeText(MainActivity.this,"Failed!",Toast.LENGTH_SHORT).show();
-                    }
-                }
-            }).addOnFailureListener(new OnFailureListener() {
-                @Override
-                public void onFailure(@NonNull Exception e) {
-                    Toast.makeText(MainActivity.this,""+e.getMessage(),Toast.LENGTH_SHORT).show();
-                }
-            });
-        }else {
-            Toast.makeText(this,"No Image Selected",Toast.LENGTH_SHORT).show();
-        }
     }
 
 
